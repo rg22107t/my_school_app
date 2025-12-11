@@ -12,10 +12,8 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 # 🔐 ユーザー認証設定
 # ==========================================
 USER_CREDENTIALS = {
-    "佐藤": "1111",
-    "鈴木": "2222",
-    "田中": "3333",
-    "管理者": "admin"
+    "橋田": "1211",
+    "ま": "1211",
 }
 
 # ==========================================
@@ -23,16 +21,16 @@ USER_CREDENTIALS = {
 # ==========================================
 TIMETABLE_ROWS = ["1/2限", "3/4限", "5/6限", "7/8限"]
 TIMETABLE_COLS = ["月", "火", "水", "木", "金"]
-# 曜日ごとのタブ表示順序制御のためにマップを持っておく
 WEEKDAY_MAP = {0: "月", 1: "火", 2: "水", 3: "木", 4: "金", 5: "土", 6: "日"}
 
 STATUS_OPTIONS = ["未着手", "作業中", "完了"]
 SUBMISSION_METHODS = ["Teams", "Classroom", "Moodle", "手渡し", "その他"]
 
 # ==========================================
-# ページ設定 & CSS（ここを強化）
+# ページ設定 & CSS
 # ==========================================
-st.set_page_config(page_title="My Campus", page_icon="🎓", layout="wide")
+# 変更点1: layout="wide" を削除し、デフォルト(centered)にすることで横幅を抑える
+st.set_page_config(page_title="My Campus", page_icon="🎓")
 
 st.markdown("""
 <style>
@@ -41,33 +39,34 @@ st.markdown("""
     .stApp { background-color: #f8f9fc; }
     
     /* ------------------------------------------
-       タブのスタイル強化 (スマホ操作用)
+       タブのスタイル (下線を削除・ボタン風)
        ------------------------------------------ */
-    /* タブ全体の文字サイズとパディングを大きくする */
-    button[data-baseweb="tab"] {
-        font-size: 1.2rem !important; /* 文字を大きく */
-        font-weight: bold !important;
-        padding: 1rem 1rem !important; /* 余白を広く */
-        min-height: 60px !important;
-        flex: 1; /* 横幅いっぱいに広げる */
-        background-color: #ffffff;
-        border-bottom: 2px solid #e0e0e0;
-    }
-    
-    /* 選択されているタブのデザイン */
-    button[data-baseweb="tab"][aria-selected="true"] {
-        color: #1a237e !important; /* 濃い青 */
-        border-bottom: 4px solid #1a237e !important;
-        background-color: #e8eaf6 !important; /* 薄い青背景 */
-    }
-    
-    /* タブコンテナの調整 */
     div[data-baseweb="tab-list"] {
-        gap: 0px;
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        gap: 8px; /* タブ間の隙間 */
+        background-color: transparent;
         margin-bottom: 20px;
+        border-bottom: none !important; /* リスト全体の下線を削除 */
+    }
+
+    button[data-baseweb="tab"] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+        padding: 0.8rem 1rem !important;
+        min-height: 50px !important;
+        flex: 1;
+        background-color: #ffffff;
+        border-radius: 10px !important; /* 角丸にする */
+        border: 1px solid #f0f0f0 !important; /* 薄い枠線 */
+        border-bottom: none !important; /* 下線を削除 */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    /* 選択されているタブ */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: white !important;
+        background-color: #1a237e !important; /* 選択時は青背景 */
+        border: none !important;
+        border-bottom: none !important; /* 下線を削除 */
     }
 
     /* ------------------------------------------
@@ -90,20 +89,20 @@ st.markdown("""
     .class-card {
         background: white;
         padding: 20px;
-        border-radius: 12px;
+        border-radius: 15px; /* 丸みを強く */
         border-top: 5px solid #5c6bc0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         text-align: center;
         height: 100%;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
     }
     .class-card-empty {
         background: #f1f3f4;
         padding: 20px;
-        border-radius: 12px;
+        border-radius: 15px;
         text-align: center;
-        color: #999;
-        margin-bottom: 10px;
+        color: #bbb;
+        margin-bottom: 15px;
     }
     
     /* 統計ボックス */
@@ -115,6 +114,13 @@ st.markdown("""
         text-align: center; 
     }
     .metric-value { font-size: 2.5rem; font-weight: 700; }
+    
+    /* 横幅の微調整（スマホでの見た目を最適化） */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 5rem;
+        max-width: 700px; /* PCでも広がりすぎないように制限 */
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -367,13 +373,12 @@ with st.sidebar:
 # メインコンテンツ表示
 # ==========================================
 
-# 1. 挨拶の改行と強調
 st.markdown(f"""
 <h3>お疲れ様です、<br>
 <span style='font-size: 1.5em; color: #1a237e;'>{current_user} さん</span> 👋</h3>
 """, unsafe_allow_html=True)
 
-# 2. メインタブ（大きく表示）
+# メインタブ（大きく表示）
 tab_schedule, tab_homework = st.tabs(["📅 時間割", "📝 宿題管理"])
 
 # --- 時間割タブ ---
@@ -383,13 +388,9 @@ with tab_schedule:
     if mode == "閲覧":
         # 今日の曜日を取得 (0=月...6=日)
         today_idx = datetime.now().weekday()
-        
-        # 曜日リストを作成（土日は月曜開始にする）
-        if today_idx > 4: 
-            today_idx = 0
+        if today_idx > 4: today_idx = 0
             
-        # 3. 曜日の順序を並べ替える（今日を先頭にする）
-        # 例：今日が水曜(2)なら → [水, 木, 金, 月, 火] の順でタブを作る
+        # 曜日の順序並べ替え
         ordered_indices = []
         for i in range(5):
             idx = (today_idx + i) % 5
@@ -404,13 +405,11 @@ with tab_schedule:
             else:
                 tab_labels.append(day_char)
         
-        # 4. 大きな曜日タブを表示
+        # 曜日タブ表示
         day_tabs = st.tabs(tab_labels)
         
-        # 各タブの中身を描画
         for i, day_tab in enumerate(day_tabs):
             with day_tab:
-                # 元のTIMETABLE_COLSのインデックス
                 original_idx = ordered_indices[i]
                 day_name = TIMETABLE_COLS[original_idx]
                 
@@ -440,11 +439,8 @@ with tab_homework:
         with st.expander("✨ タスクを追加", expanded=False):
             with st.form("add_task", clear_on_submit=True):
                 c1, c2 = st.columns([2, 1])
-                
-                # 4. 科目をテキスト入力のみに変更
                 with c1:
                     subject = st.text_input("科目名（必須）", placeholder="例：応用数学A")
-                
                 with c2:
                     due_date = st.date_input("期限（必須）", date.today())
                 
@@ -469,7 +465,6 @@ with tab_homework:
     
     st.write("")
     
-    # 未完了・完了リスト
     t_inc, t_com = st.tabs(["未完了", "完了済み"])
     
     with t_inc:
@@ -479,7 +474,6 @@ with tab_homework:
                 c1, c2 = st.columns([5, 1])
                 c1.markdown(render_homework_card(hw), unsafe_allow_html=True)
                 if not st.session_state.is_guest:
-                    # 完了ボタンも少し大きく
                     if c2.button("完了", key=f"done_{hw['id']}", use_container_width=True):
                         update_user_status(hw['id'], current_user, "完了")
                         st.rerun()
