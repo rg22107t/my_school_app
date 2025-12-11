@@ -181,7 +181,6 @@ def render_homework_card(homework):
     <div class="custom-card {border}">
         <div style="display:flex; justify-content:space-between;">
             <div>
-                <span class="badge badge-prio-{homework['priority']}">{homework['priority']}</span>
                 <b>{homework['subject']}</b>
             </div>
             <div>{badge}</div>
@@ -429,75 +428,69 @@ with tab_homework:
     # タスク追加フォーム
     with st.expander("✨ タスクを追加", expanded=False):
         with st.form("add_task", clear_on_submit=True):
-            use_manual_input = st.toggle("科目を直接入力する", value=False)
-            
-            col1, col2, col3 = st.columns([2, 1, 1])
+            # 科目と期限を横並び
+            col1, col2 = st.columns([2, 1])
             
             with col1:
-                if use_manual_input:
-                    subject = st.text_input("科目名")
-                else:
-                    subject = st.selectbox("科目を選択", SUBJECT_LIST)
-            
-            priority = col2.selectbox("優先度", ["高", "中", "低"])
-            method = col3.selectbox("提出方法", SUBMISSION_METHODS)
-            
-            content = st.text_input("内容")
-            
-            # 日付入力を日本語化
-            st.write("📅 期限")
-            date_col1, date_col2, date_col3 = st.columns(3)
-            
-            today = date.today()
-            with date_col1:
-                year = st.selectbox(
-                    "年",
-                    range(today.year, today.year + 2),
-                    index=0,
-                    label_visibility="visible"
+                # コンボボックス形式：リストから選択も手入力も可能
+                subject = st.selectbox(
+                    "科目（必須）",
+                    [""] + SUBJECT_LIST,
+                    format_func=lambda x: "科目を選択または入力..." if x == "" else x
                 )
-            with date_col2:
-                month = st.selectbox(
-                    "月",
-                    range(1, 13),
-                    index=today.month - 1,
-                    format_func=lambda x: f"{x}月",
-                    label_visibility="visible"
-                )
-            with date_col3:
-                # 選択された年月の最終日を取得
-                import calendar
-                max_day = calendar.monthrange(year, month)[1]
-                day_index = min(today.day - 1, max_day - 1)
-                day = st.selectbox(
-                    "日",
-                    range(1, max_day + 1),
-                    index=day_index,
-                    format_func=lambda x: f"{x}日",
-                    label_visibility="visible"
-                )
+                # 手入力オプション
+                if subject == "":
+                    subject = st.text_input("科目名を入力", placeholder="例: 電子回路2")
             
-            try:
-                due_date = date(year, month, day)
-            except ValueError:
-                due_date = today
+            with col2:
+                due_date = st.date_input("期限（必須）", date.today())
             
-            if st.form_submit_button("追加"):
+            # 内容・メモ
+            content = st.text_area(
+                "内容・メモ",
+                placeholder="詳細を入力（教科書の範囲、提出物の種類など）",
+                height=80
+            )
+            
+            # 提出方法をボタン形式で
+            st.write("📤 提出方法")
+            method_cols = st.columns(len(SUBMISSION_METHODS))
+            selected_method = None
+            
+            for idx, method_option in enumerate(SUBMISSION_METHODS):
+                with method_cols[idx]:
+                    if st.form_submit_button(
+                        method_option,
+                        use_container_width=True,
+                        type="secondary"
+                    ):
+                        selected_method = method_option
+            
+            # メインの追加ボタン
+            col_spacer, col_submit = st.columns([3, 1])
+            with col_submit:
+                submit_clicked = st.form_submit_button("追加", type="primary", use_container_width=True)
+            
+            # デフォルトの提出方法
+            if selected_method is None:
+                selected_method = SUBMISSION_METHODS[0]
+            
+            if submit_clicked or selected_method:
                 if content and subject:
                     new_homework = {
                         "id": str(uuid.uuid4()),
                         "subject": subject,
                         "content": content,
                         "due_date": due_date,
-                        "method": method,
-                        "priority": priority,
+                        "method": selected_method,
+                        "priority": "中",  # デフォルト値として保持（表示はしない）
                         "status": "未着手"
                     }
                     st.session_state.homework_list.append(new_homework)
                     save_all_data(st.session_state.timetable_data, st.session_state.homework_list)
                     st.success("追加しました")
                     st.rerun()
-                else:
+                elif submit_clicked:
                     st.error("科目と内容は必須です")
     
     # フィルタリング
@@ -510,13 +503,12 @@ with tab_homework:
     
     # 宿題リストの表示
     if st.session_state.homework_list:
-        # ソート: 完了→期限→優先度
+        # ソート: 完了→期限のみ
         sorted_homework = sorted(
             st.session_state.homework_list,
             key=lambda x: (
                 x['status'] == '完了',
-                x['due_date'],
-                PRIORITY_ORDER[x['priority']]
+                x['due_date']
             )
         )
         
