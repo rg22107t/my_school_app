@@ -11,7 +11,7 @@ import os
 DATA_FILE = "school_data_v2.json"
 
 st.set_page_config(
-    page_title="My Campus | Smart Manager",
+    page_title="マイキャンパス | スマートマネージャー",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -46,7 +46,7 @@ def save_data():
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        st.error(f"Save Error: {e}")
+        st.error(f"保存エラー: {e}")
 
 def load_data():
     if not os.path.exists(DATA_FILE): return None
@@ -77,7 +77,7 @@ if "init" not in st.session_state:
     st.session_state.init = True
 
 # ==========================================
-# 2. デザイン定義 (Custom CSS)
+# 2. デザイン定義 (カスタムCSS)
 # ==========================================
 st.markdown("""
 <style>
@@ -155,7 +155,7 @@ st.markdown("""
 # 3. サイドバー (ダッシュボード)
 # ==========================================
 with st.sidebar:
-    st.markdown("### 🎓 My Campus")
+    st.markdown("### 🎓 マイキャンパス")
     
     # 統計情報の計算
     incomplete = [h for h in st.session_state.homework_list if h['status'] != '完了']
@@ -169,7 +169,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    st.write("") # Spacer
+    st.write("") # スペーサー
     
     if urgent:
         st.error(f"🔥 **{len(urgent)}件** の課題が期限間近です！")
@@ -195,16 +195,16 @@ with st.sidebar:
 # ヘッダーエリア
 col_h1, col_h2 = st.columns([3, 1])
 with col_h1:
-    st.title("Welcome Back 👋")
-    st.markdown(f"Today: **{date.today().strftime('%Y/%m/%d')}**")
+    st.title("おかえりなさい 👋")
+    st.markdown(f"今日: **{date.today().strftime('%Y/%m/%d')}**")
 
 st.write("")
 
 # タブデザイン
-tab_schedule, tab_homework = st.tabs(["📅 Smart Timetable", "📝 Task Manager"])
+tab_schedule, tab_homework = st.tabs(["📅 スマート時間割", "📝 タスク管理"])
 
 # ------------------------------------------
-# TAB 1: 時間割 (Smart View)
+# TAB 1: 時間割 (スマート表示)
 # ------------------------------------------
 with tab_schedule:
     weekdays = ["月", "火", "水", "木", "金", "土", "日"]
@@ -213,9 +213,9 @@ with tab_schedule:
     # モード切替を洗練されたUIに
     col_mode, _ = st.columns([2, 5])
     with col_mode:
-        mode = st.radio("Display Mode", ["Today's Focus", "Edit Week"], label_visibility="collapsed", horizontal=True)
+        mode = st.radio("表示モード", ["今日の授業", "週間編集"], label_visibility="collapsed", horizontal=True)
     
-    if mode == "Today's Focus":
+    if mode == "今日の授業":
         st.subheader(f"📅 今日の授業 ({today_jp})")
         
         if today_jp in st.session_state.timetable_data.columns:
@@ -239,7 +239,7 @@ with tab_schedule:
                     st.markdown(f"""
                     <div style="background:#f1f3f4; padding:15px; border-radius:12px; height:100%; text-align:center; opacity:0.6;">
                         <div style="color:gray; font-size:0.8rem;">{period}</div>
-                        <div style="font-size:0.9rem;">No Class</div>
+                        <div style="font-size:0.9rem;">空きコマ</div>
                     </div>
                     """, unsafe_allow_html=True)
             
@@ -262,7 +262,7 @@ with tab_schedule:
             save_data()
 
 # ------------------------------------------
-# TAB 2: 宿題管理 (Modern List)
+# TAB 2: 宿題管理 (モダンリスト)
 # ------------------------------------------
 with tab_homework:
     # 新規登録フォーム（アコーディオン）
@@ -294,7 +294,7 @@ with tab_homework:
     # フィルタリング機能
     c_filter, _ = st.columns([2, 3])
     with c_filter:
-        status_filter = st.multiselect("Status Filter", ["未着手", "作業中", "完了"], default=["未着手", "作業中"])
+        status_filter = st.multiselect("状態フィルター", ["未着手", "作業中", "完了"], default=["未着手", "作業中"])
 
     # リスト表示ロジック
     if not st.session_state.homework_list:
@@ -314,19 +314,19 @@ with tab_homework:
                 # スタイル分岐
                 if hw['status'] == "完了":
                     border_class = "border-green"
-                    status_badge = '<span style="color:#43a047; font-weight:bold;">✅ DONE</span>'
+                    status_badge = '<span style="color:#43a047; font-weight:bold;">✅ 完了</span>'
                     bg_style = "opacity: 0.7;"
                 elif days_left < 0:
                     border_class = "border-red"
-                    status_badge = f'<span style="color:#e53935; font-weight:bold;">🚨 {abs(days_left)} DAYS OVER</span>'
+                    status_badge = f'<span style="color:#e53935; font-weight:bold;">🚨 {abs(days_left)}日遅延</span>'
                     bg_style = ""
                 elif days_left == 0:
                     border_class = "border-orange"
-                    status_badge = '<span style="color:#fb8c00; font-weight:bold;">🔥 TODAY</span>'
+                    status_badge = '<span style="color:#fb8c00; font-weight:bold;">🔥 今日まで</span>'
                     bg_style = ""
                 else:
                     border_class = "border-blue"
-                    status_badge = f'<span style="color:#1e88e5; font-weight:bold;">⏱ {days_left} days left</span>'
+                    status_badge = f'<span style="color:#1e88e5; font-weight:bold;">⏱ あと{days_left}日</span>'
                     bg_style = ""
 
                 # 高級カードUIのレンダリング
@@ -345,8 +345,8 @@ with tab_homework:
                             </div>
                             <div style="font-size:1rem; margin-bottom:10px;">{hw['content']}</div>
                             <div style="font-size:0.8rem; color:#666; display:flex; gap:15px;">
-                                <span>📅 Limit: <b>{hw['due_date']}</b></span>
-                                <span>📤 Via: <b>{hw['method']}</b></span>
+                                <span>📅 期限: <b>{hw['due_date']}</b></span>
+                                <span>📤 提出: <b>{hw['method']}</b></span>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -356,7 +356,7 @@ with tab_homework:
                         st.write("") # 上部余白
                         current_idx = ["未着手", "作業中", "完了"].index(hw['status'])
                         new_status = st.selectbox(
-                            "Status", ["未着手", "作業中", "完了"], 
+                            "状態", ["未着手", "作業中", "完了"], 
                             index=current_idx, 
                             key=f"sel_{hw['id']}", 
                             label_visibility="collapsed"
