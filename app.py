@@ -10,49 +10,49 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 # ==========================================
 # 1. 基本設定 & Google Sheets 接続設定
 # ==========================================
+
 st.set_page_config(
-    page_title="My Campus | Shared App",
+    page_title="My Campus | 共有アプリ",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 科目リスト
+# 科目リスト（選択入力の際の候補として使用）
 SUBJECT_LIST = [
-    "現代社会論", "保健・体育4", "ドイツ語", "中国語", "応用数学A", "応用数学B", 
-    "物理学A", "物理学B", "計測工学", "技術英語", "電子回路2", "電気回路3", 
-    "電磁気学2", "電気電子材料3", "半導体工学2", "コンピュータ工学基礎", "制御工学1", 
-    "エレクトロニクス実験2", "法律", "経済", "哲学", "心理学", "現代物理学概論", 
-    "英語A", "英語B", "制御工学2", "電気機器", "電力技術", "パワーエレクトロニクス", 
-    "信号処理", "電気化学", "センサー工学", "ワイヤレス技術", "エレクトロニクス実験3", 
-    "卒業研究", "応用専門概論", "応用専門PBL1", "応用専門PBL2", "物質プロセス基礎", 
-    "生活と物質", "社会と環境", "物質デザイン概論", "防災工学", "エルゴノミクス", 
-    "インターンシップ", "食品エンジニアリング", "コスメティックス", "バイオテクノロジー", 
-    "高純度化技術", "環境モニタリング", "エネルギー変換デバイス", "食と健康のセンサ", 
-    "環境対応デバイス", "社会基盤構造", "環境衛生工学", "維持管理工学", "水環境工学", 
+    "現代社会論", "保健・体育4", "ドイツ語", "中国語", "応用数学A", "応用数学B",
+    "物理学A", "物理学B", "計測工学", "技術英語", "電子回路2", "電気回路3",
+    "電磁気学2", "電気電子材料3", "半導体工学2", "コンピュータ工学基礎", "制御工学1",
+    "エレクトロニクス実験2", "法律", "経済", "哲学", "心理学", "現代物理学概論",
+    "英語A", "英語B", "制御工学2", "電気機器", "電力技術", "パワーエレクトロニクス",
+    "信号処理", "電気化学", "センサー工学", "ワイヤレス技術", "エレクトロニクス実験3",
+    "卒業研究", "応用専門概論", "応用専門PBL1", "応用専門PBL2", "物質プロセス基礎",
+    "生活と物質", "社会と環境", "物質デザイン概論", "防災工学", "エルゴノミクス",
+    "インターンシップ", "食品エンジニアリング", "コスメティックス", "バイオテクノロジー",
+    "高純度化技術", "環境モニタリング", "エネルギー変換デバイス", "食と健康のセンサ",
+    "環境対応デバイス", "社会基盤構造", "環境衛生工学", "維持管理工学", "水環境工学",
     "環境デザイン論", "インクルーシブデザイン", "空間情報学", "環境行動", "その他"
 ]
 
-# --- Google Sheets 接続関数（修正版） ---
+# --- Google Sheets 接続関数 ---
+
 def get_connection():
-    # StreamlitのSecretsからJSON文字列として取得し、辞書に変換
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    
-    # ★ここを修正しました★
+    # secretsから認証情報を取得
     json_str = st.secrets["gcp_service_account"]["my_key"]
     creds_dict = json.loads(json_str)
-    
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     return client
 
-# データの読み込み
+# --- データの読み込み ---
+
 def load_data_from_sheets():
     try:
         client = get_connection()
-        # スプレッドシートを開く（名前は 'School_DB' と仮定）
+        # スプレッドシートを開く
         sheet = client.open("School_DB")
-        
+
         # --- 宿題データの読み込み ---
         ws_hw = sheet.worksheet("Homework")
         df_hw = get_as_dataframe(ws_hw, evaluate_formulas=True).dropna(how='all')
@@ -80,12 +80,16 @@ def load_data_from_sheets():
         # --- 時間割データの読み込み ---
         ws_tt = sheet.worksheet("Timetable")
         df_tt = get_as_dataframe(ws_tt, evaluate_formulas=True)
+        # 必要な範囲のみ取得（4時限×5曜日想定）
         df_tt = df_tt.iloc[:4, :6]
         if "Unnamed: 0" in df_tt.columns: df_tt.set_index("Unnamed: 0", inplace=True)
         
         rows = ["1/2限", "3/4限", "5/6限", "7/8限"]
         cols = ["月", "火", "水", "木", "金"]
-        if df_tt.shape != (4, 5): df_tt = pd.DataFrame("", index=rows, columns=cols)
+        
+        # データ形状が合わない場合は初期化
+        if df_tt.shape != (4, 5): 
+            df_tt = pd.DataFrame("", index=rows, columns=cols)
         else:
             df_tt.index = rows
             df_tt.columns = cols
@@ -93,15 +97,16 @@ def load_data_from_sheets():
 
         return {'timetable': df_tt, 'homework': homework_list}
     except Exception as e:
-        st.error(f"Connect Error: {e}")
+        st.error(f"接続エラー: {e}")
         return None
 
-# データの保存
+# --- データの保存 ---
+
 def save_data_to_sheets(timetable_df, homework_list):
     try:
         client = get_connection()
         sheet = client.open("School_DB")
-        
+
         ws_hw = sheet.worksheet("Homework")
         ws_hw.clear()
         if homework_list:
@@ -115,13 +120,14 @@ def save_data_to_sheets(timetable_df, homework_list):
         ws_tt.clear()
         set_with_dataframe(ws_tt, timetable_df, include_index=True)
     except Exception as e:
-        st.error(f"Save Error: {e}")
+        st.error(f"保存エラー: {e}")
 
 # --- 初期化 ---
+
 if "init" not in st.session_state:
-    with st.spinner('Loading data from Google Sheets...'):
+    with st.spinner('Google Sheetsからデータを読み込み中...'):
         loaded = load_data_from_sheets()
-    
+
     if loaded:
         st.session_state.timetable_data = loaded['timetable']
         st.session_state.homework_list = loaded['homework']
@@ -135,6 +141,7 @@ if "init" not in st.session_state:
 # ==========================================
 # 2. デザイン定義 (CSS)
 # ==========================================
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
@@ -157,42 +164,45 @@ st.markdown("""
 # ==========================================
 # 3. サイドバー
 # ==========================================
+
 with st.sidebar:
-    st.markdown("### 🎓 Shared Campus")
-    
+    st.markdown("### 🎓 My Campus")
+
     if st.button("🔄 データを更新"):
         del st.session_state.init
         st.rerun()
-    
+
     incomplete = [h for h in st.session_state.homework_list if h['status'] != '完了']
     urgent = [h for h in incomplete if (h['due_date'] - date.today()).days <= 1]
-    
+
     st.markdown(f"""
     <div class="metric-container">
-        <div class="metric-label">みんなの未完了タスク</div>
+        <div class="metric-label">未完了タスク</div>
         <div class="metric-value">{len(incomplete)}</div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     if urgent:
-        st.error(f"🔥 **{len(urgent)}件** が期限間近！")
+        st.error(f"🔥 **{len(urgent)}件** の期限が迫っています！")
 
 # ==========================================
 # 4. メインコンテンツ
 # ==========================================
-st.title("Welcome Back 👋")
-st.caption("Google Sheets連携中: データはリアルタイム共有されます")
+
+st.title("お疲れ様です 👋")
+st.caption("Google Sheets連携中: データはリアルタイムで共有されます")
 
 tab_schedule, tab_homework = st.tabs(["📅 時間割", "📝 宿題管理"])
 
 # --- TAB 1: 時間割 ---
+
 with tab_schedule:
     weekdays = ["月", "火", "水", "木", "金", "土", "日"]
     today_jp = weekdays[datetime.now().weekday()]
-    
-    mode = st.radio("Display Mode", ["Today's Focus", "Edit Week"], label_visibility="collapsed", horizontal=True)
-    
-    if mode == "Today's Focus":
+
+    mode = st.radio("表示モード", ["今日の予定", "時間割の編集"], label_visibility="collapsed", horizontal=True)
+
+    if mode == "今日の予定":
         st.subheader(f"📅 今日の授業 ({today_jp})")
         if today_jp in st.session_state.timetable_data.columns:
             schedule = st.session_state.timetable_data[today_jp]
@@ -215,13 +225,14 @@ with tab_schedule:
                             <div>-</div>
                         </div>
                         """, unsafe_allow_html=True)
-            if not has_class: st.info("授業はありません")
-        else: st.success("休日です")
+            if not has_class: st.info("本日の授業はありません")
+        else: st.success("今日は休日です")
     else:
-        st.markdown("#### ✏️ 週間スケジュールの編集")
+        st.markdown("#### ✏️ 時間割の編集")
+        st.info("セルをダブルクリックして科目を直接入力できます。")
+        # ★修正点: SelectboxColumnを削除し、自由入力(デフォルト)に変更しました
         edited_df = st.data_editor(
             st.session_state.timetable_data,
-            column_config={c: st.column_config.SelectboxColumn(c, options=SUBJECT_LIST) for c in ["月", "火", "水", "木", "金"]},
             use_container_width=True,
             height=300
         )
@@ -231,18 +242,28 @@ with tab_schedule:
             st.success("保存しました！")
 
 # --- TAB 2: 宿題管理 ---
+
 with tab_homework:
     with st.expander("✨ タスクを追加", expanded=False):
         with st.form("add_task", clear_on_submit=True):
+            # ★修正点: 科目の入力方法を選択できるように変更
+            use_manual_input = st.toggle("科目を直接入力する", value=False)
+            
             c1, c2, c3 = st.columns([2, 1, 1])
-            subj = c1.selectbox("科目", SUBJECT_LIST)
+            
+            with c1:
+                if use_manual_input:
+                    subj = st.text_input("科目名")
+                else:
+                    subj = st.selectbox("科目を選択", SUBJECT_LIST)
+            
             prio = c2.selectbox("優先度", ["高", "中", "低"])
             meth = c3.selectbox("提出方法", ["Teams", "Classroom", "Moodle", "手渡し", "その他"])
             content = st.text_input("内容")
             dd = st.date_input("期限", date.today())
-            
+
             if st.form_submit_button("追加"):
-                if content:
+                if content and subj:
                     st.session_state.homework_list.append({
                         "id": str(uuid.uuid4()),
                         "subject": subj, "content": content,
@@ -252,9 +273,11 @@ with tab_homework:
                     save_data_to_sheets(st.session_state.timetable_data, st.session_state.homework_list)
                     st.success("追加しました")
                     st.rerun()
+                else:
+                    st.error("科目と内容は必須です")
 
     st.write("")
-    filter_status = st.multiselect("Filter", ["未着手", "作業中", "完了"], default=["未着手", "作業中"])
+    filter_status = st.multiselect("ステータスで絞り込み", ["未着手", "作業中", "完了"], default=["未着手", "作業中"])
 
     if st.session_state.homework_list:
         prio_map = {"高": 0, "中": 1, "低": 2}
@@ -264,11 +287,11 @@ with tab_homework:
             if hw['status'] in filter_status:
                 days = (hw['due_date'] - date.today()).days
                 if hw['status'] == "完了":
-                    border, badge = "border-green", '<span style="color:green">✅ DONE</span>'
+                    border, badge = "border-green", '<span style="color:green">✅ 完了</span>'
                 elif days < 0:
                     border, badge = "border-red", f'<span style="color:red">🚨 {abs(days)}日遅れ</span>'
                 elif days == 0:
-                    border, badge = "border-orange", '<span style="color:orange">🔥 今日</span>'
+                    border, badge = "border-orange", '<span style="color:orange">🔥 今日まで</span>'
                 else:
                     border, badge = "border-blue", f'<span style="color:blue">⏱ あと{days}日</span>'
 
@@ -288,7 +311,7 @@ with tab_homework:
                     with c_act:
                         st.write("")
                         idx = ["未着手", "作業中", "完了"].index(hw['status'])
-                        new_stat = st.selectbox("Status", ["未着手", "作業中", "完了"], index=idx, key=f"s_{hw['id']}", label_visibility="collapsed")
+                        new_stat = st.selectbox("状態変更", ["未着手", "作業中", "完了"], index=idx, key=f"s_{hw['id']}", label_visibility="collapsed")
                         if st.button("🗑", key=f"d_{hw['id']}"):
                             st.session_state.homework_list = [x for x in st.session_state.homework_list if x['id'] != hw['id']]
                             save_data_to_sheets(st.session_state.timetable_data, st.session_state.homework_list)
