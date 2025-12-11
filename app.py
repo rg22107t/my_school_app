@@ -386,11 +386,15 @@ with tab_homework:
         st.info("👁️ ゲストモードでは宿題の追加・編集はできません（閲覧のみ）")
 
     st.write("")
-    filter_status = st.multiselect("ステータスで絞り込み", STATUS_OPTIONS, default=["未着手", "作業中"])
-    if st.session_state.homework_list:
-        sorted_homework = sorted(st.session_state.homework_list, key=lambda x: (x['status'] == '完了', x['due_date']))
-        for hw in sorted_homework:
-            if hw['status'] in filter_status:
+    
+    # タブで未着手/完了済みを切り替え
+    homework_tab_incomplete, homework_tab_complete = st.tabs(["📋 未完了", "✅ 完了済み"])
+    
+    with homework_tab_incomplete:
+        incomplete_homework = [hw for hw in st.session_state.homework_list if hw['status'] != '完了']
+        if incomplete_homework:
+            sorted_homework = sorted(incomplete_homework, key=lambda x: x['due_date'])
+            for hw in sorted_homework:
                 col_main, col_action = st.columns([4, 1])
                 with col_main: st.markdown(render_homework_card(hw), unsafe_allow_html=True)
                 with col_action:
@@ -398,11 +402,22 @@ with tab_homework:
                     if st.session_state.is_guest:
                         st.markdown(f"<div style='text-align:center; color:gray; font-size:0.9em;'>{hw['status']}</div>", unsafe_allow_html=True)
                     else:
-                        if hw['status'] != "完了":
-                            if st.button("✅ 完了", key=f"btn_{hw['id']}", use_container_width=True):
-                                if update_user_status(hw['id'], current_user, "完了"):
-                                    del st.session_state.init
-                                    st.rerun()
-                        else:
-                            st.markdown("<div style='text-align:center; color:green; font-weight:bold;'>✓</div>", unsafe_allow_html=True)
-    else: st.info("宿題はありません")
+                        if st.button("✅ 完了", key=f"btn_{hw['id']}", use_container_width=True):
+                            if update_user_status(hw['id'], current_user, "完了"):
+                                del st.session_state.init
+                                st.rerun()
+        else:
+            st.info("未完了の宿題はありません")
+    
+    with homework_tab_complete:
+        complete_homework = [hw for hw in st.session_state.homework_list if hw['status'] == '完了']
+        if complete_homework:
+            sorted_homework = sorted(complete_homework, key=lambda x: x['due_date'], reverse=True)
+            for hw in sorted_homework:
+                col_main, col_action = st.columns([4, 1])
+                with col_main: st.markdown(render_homework_card(hw), unsafe_allow_html=True)
+                with col_action:
+                    st.write("")
+                    st.markdown("<div style='text-align:center; color:green; font-weight:bold;'>✓</div>", unsafe_allow_html=True)
+        else:
+            st.info("完了した宿題はありません")
