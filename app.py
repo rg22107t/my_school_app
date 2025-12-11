@@ -4,6 +4,7 @@ from datetime import date, datetime
 import uuid
 import gspread
 import json
+import calendar
 from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
@@ -442,7 +443,44 @@ with tab_homework:
             method = col3.selectbox("提出方法", SUBMISSION_METHODS)
             
             content = st.text_input("内容")
-            due_date = st.date_input("期限", date.today())
+            
+            # 日付入力を日本語化
+            st.write("📅 期限")
+            date_col1, date_col2, date_col3 = st.columns(3)
+            
+            today = date.today()
+            with date_col1:
+                year = st.selectbox(
+                    "年",
+                    range(today.year, today.year + 2),
+                    index=0,
+                    label_visibility="visible"
+                )
+            with date_col2:
+                month = st.selectbox(
+                    "月",
+                    range(1, 13),
+                    index=today.month - 1,
+                    format_func=lambda x: f"{x}月",
+                    label_visibility="visible"
+                )
+            with date_col3:
+                # 選択された年月の最終日を取得
+                import calendar
+                max_day = calendar.monthrange(year, month)[1]
+                day_index = min(today.day - 1, max_day - 1)
+                day = st.selectbox(
+                    "日",
+                    range(1, max_day + 1),
+                    index=day_index,
+                    format_func=lambda x: f"{x}日",
+                    label_visibility="visible"
+                )
+            
+            try:
+                due_date = date(year, month, day)
+            except ValueError:
+                due_date = today
             
             if st.form_submit_button("追加"):
                 if content and subject:
