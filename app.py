@@ -390,20 +390,11 @@ with tab_homework:
                     if st.session_state.is_guest:
                         st.markdown(f"<div style='text-align:center; color:gray; font-size:0.9em;'>{hw['status']}</div>", unsafe_allow_html=True)
                     else:
-                        current_status = hw['status']
-                        if current_status == "未着手":
-                            if st.button("▶️ 開始", key=f"btn_{hw['id']}", use_container_width=True):
-                                if update_user_status(hw['id'], current_user, "作業中"):
-                                    del st.session_state.init
-                                    st.rerun()
-                        elif current_status == "作業中":
+                        if hw['status'] != "完了":
                             if st.button("✅ 完了", key=f"btn_{hw['id']}", use_container_width=True, type="primary"):
                                 if update_user_status(hw['id'], current_user, "完了"):
                                     del st.session_state.init
                                     st.rerun()
-                        else:  # 完了
-                            if st.button("🔄 戻す", key=f"btn_{hw['id']}", use_container_width=True):
-                                if update_user_status(hw['id'], current_user, "未着手"):
-                                    del st.session_state.init
-                                    st.rerun()
+                        else:
+                            st.markdown("<div style='text-align:center; color:green; font-weight:bold;'>✓</div>", unsafe_allow_html=True)
     else: st.info("宿題はありません")
