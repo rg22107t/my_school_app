@@ -213,7 +213,7 @@ with tab_schedule:
     # モード切替を洗練されたUIに
     col_mode, _ = st.columns([2, 5])
     with col_mode:
-        mode = st.radio("表示モード", ["今日の授業", "週間編集"], label_visibility="collapsed", horizontal=True)
+        mode = st.radio("表示モード", ["今日の授業", "授業時間を編集"], label_visibility="collapsed", horizontal=True)
     
     if mode == "今日の授業":
         st.subheader(f"📅 今日の授業 ({today_jp})")
