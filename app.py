@@ -330,73 +330,62 @@ with tab_schedule:
     
     if mode == "週間時間割":
         st.subheader(f"📅 今週の時間割")
+        st.markdown(f"<p style='text-align:center; color:gray;'>今日: {today_date} ({today_weekday}曜日)</p>", unsafe_allow_html=True)
         
-        # 曜日ごとにタブで表示
-        weekday_tabs = st.tabs([f"{'🔥 ' if day == today_weekday else ''}{day}曜日" for day in TIMETABLE_COLS])
-        
-        for idx, day in enumerate(TIMETABLE_COLS):
-            with weekday_tabs[idx]:
-                is_today = (day == today_weekday)
-                
-                # 今日の場合は特別な表示
-                if is_today:
-                    st.markdown(f"""
-                    <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                color: white; padding: 15px; border-radius: 12px; text-align: center; 
-                                margin-bottom: 20px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);'>
-                        <div style='font-size: 1.2rem; font-weight: bold;'>📍 今日の授業</div>
-                        <div style='font-size: 0.9rem; opacity: 0.9;'>{today_date} ({today_weekday})</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"### {day}曜日の授業")
-                
-                if day in st.session_state.timetable_data.columns:
-                    schedule = st.session_state.timetable_data[day]
-                    has_class = False
-                    previous_subject = None
+        # 表形式で全曜日を表示
+        for period in TIMETABLE_ROWS:
+            st.markdown(f"### {period}")
+            cols = st.columns(5)
+            
+            for idx, day in enumerate(TIMETABLE_COLS):
+                with cols[idx]:
+                    is_today = (day == today_weekday)
+                    subject = st.session_state.timetable_data.loc[period, day] if day in st.session_state.timetable_data.columns else ""
                     
-                    for period, subject in schedule.items():
-                        is_continuation = (subject == previous_subject and subject and str(subject).strip())
-                        
+                    # 今日の列は特別なスタイル
+                    if is_today:
                         if subject and str(subject).strip():
-                            has_class = True
-                            if is_continuation:
-                                st.markdown(f"""
-                                <div style="background:white; padding:15px; border-radius:12px; 
-                                            border-left: 5px solid #9fa8da; box-shadow:0 4px 6px rgba(0,0,0,0.05); 
-                                            margin-bottom: 10px; opacity: 0.7;">
-                                    <div style="color:gray; font-size:0.8rem; margin-bottom: 5px;">{period}</div>
-                                    <div style="font-weight:bold; color:#5c6bc0;">↓ 継続</div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            else:
-                                # 今日の授業は特別なスタイル
-                                border_color = "#667eea" if is_today else "#5c6bc0"
-                                shadow = "0 6px 12px rgba(102, 126, 234, 0.3)" if is_today else "0 4px 6px rgba(0,0,0,0.05)"
-                                st.markdown(f"""
-                                <div style="background:white; padding:15px; border-radius:12px; 
-                                            border-left: 5px solid {border_color}; box-shadow:{shadow}; 
-                                            margin-bottom: 10px;">
-                                    <div style="color:gray; font-size:0.8rem; margin-bottom: 5px;">{period}</div>
-                                    <div style="font-weight:bold; color:#1a237e; font-size: 1.1rem;">{subject}</div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                        else:
                             st.markdown(f"""
-                            <div style="background:#f1f3f4; padding:15px; border-radius:12px; 
-                                        margin-bottom: 10px; opacity:0.6;">
-                                <div style="color:gray; font-size:0.8rem; margin-bottom: 5px;">{period}</div>
-                                <div style="color:#999;">授業なし</div>
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                        padding:20px; border-radius:12px; text-align:center; 
+                                        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); 
+                                        border: 3px solid #667eea;">
+                                <div style="color:white; font-size:0.85rem; margin-bottom: 8px; font-weight: 500;">🔥 {day}曜日</div>
+                                <div style="color:white; font-weight:bold; font-size: 1.15rem;">{subject}</div>
                             </div>
                             """, unsafe_allow_html=True)
-                        
-                        previous_subject = subject
-                    
-                    if not has_class:
-                        st.info(f"{day}曜日は授業がありません")
-                else:
-                    st.success(f"{day}曜日は休日です")
+                        else:
+                            st.markdown(f"""
+                            <div style="background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%); 
+                                        padding:20px; border-radius:12px; text-align:center; 
+                                        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); 
+                                        border: 3px solid #667eea;">
+                                <div style="color:white; font-size:0.85rem; margin-bottom: 8px; font-weight: 500;">🔥 {day}曜日</div>
+                                <div style="color:white; opacity:0.8;">授業なし</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    else:
+                        # 通常の表示
+                        if subject and str(subject).strip():
+                            st.markdown(f"""
+                            <div style="background:white; padding:20px; border-radius:12px; 
+                                        border-top: 5px solid #5c6bc0; box-shadow:0 4px 6px rgba(0,0,0,0.05); 
+                                        text-align:center;">
+                                <div style="color:gray; font-size:0.8rem; margin-bottom: 5px;">{day}曜日</div>
+                                <div style="font-weight:bold; color:#1a237e;">{subject}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"""
+                            <div style="background:#f1f3f4; padding:20px; border-radius:12px; 
+                                        text-align:center; opacity:0.6;">
+                                <div style="color:gray; font-size:0.8rem; margin-bottom: 5px;">{day}曜日</div>
+                                <div style="color:#999;">-</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+            
+            st.write("")  # 時限間のスペース
+            
     else:
         if st.session_state.is_guest:
             st.warning("⚠️ ゲストユーザーは時間割を編集できません")
