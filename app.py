@@ -14,10 +14,8 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
 # ユーザー名: パスワード の組み合わせ
 USER_CREDENTIALS = {
-    "佐藤": "1111",
-    "鈴木": "2222",
-    "田中": "3333",
-    "管理者": "admin"
+    "橋田": "1211",
+    "前田": "1211",
 }
 
 # ==========================================
@@ -219,6 +217,8 @@ st.markdown("""
 
 if 'logged_in_user' not in st.session_state:
     st.session_state.logged_in_user = None
+if 'is_guest' not in st.session_state:
+    st.session_state.is_guest = False
 
 def login():
     st.markdown("<h1 style='text-align: center;'>🎓 My Campus Login</h1>", unsafe_allow_html=True)
@@ -226,18 +226,31 @@ def login():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         with st.form("login_form"):
-            username = st.selectbox("ユーザー名を選択", list(USER_CREDENTIALS.keys()))
-            password = st.text_input("パスワード", type="password")
+            username = st.text_input("ユーザー名", placeholder="ユーザー名を入力してください")
+            password = st.text_input("パスワード", type="password", placeholder="パスワードを入力してください")
             submitted = st.form_submit_button("ログイン", use_container_width=True)
             
             if submitted:
-                if USER_CREDENTIALS.get(username) == password:
+                if username.strip() == "":
+                    st.error("ユーザー名を入力してください")
+                elif USER_CREDENTIALS.get(username) == password:
                     st.session_state.logged_in_user = username
+                    st.session_state.is_guest = False
                     st.success("ログイン成功！")
                     time.sleep(0.5)
                     st.rerun()
                 else:
-                    st.error("パスワードが間違っています")
+                    st.error("ユーザー名またはパスワードが間違っています")
+        
+        st.divider()
+        st.markdown("<p style='text-align: center; color: gray;'>または</p>", unsafe_allow_html=True)
+        
+        if st.button("👁️ ゲストとして閲覧", use_container_width=True):
+            st.session_state.logged_in_user = "ゲスト"
+            st.session_state.is_guest = True
+            st.info("ゲストモードでログインしました（閲覧のみ）")
+            time.sleep(0.5)
+            st.rerun()
 
 # ログインしていない場合はログイン画面を表示して処理終了
 if st.session_state.logged_in_user is None:
@@ -252,10 +265,15 @@ current_user = st.session_state.logged_in_user
 
 # --- サイドバー ---
 with st.sidebar:
-    st.markdown(f"### 👤 {current_user}")
+    if st.session_state.is_guest:
+        st.markdown("### 👁️ ゲスト（閲覧のみ）")
+        st.info("閲覧モードです。編集するにはログインしてください。")
+    else:
+        st.markdown(f"### 👤 {current_user}")
     
     if st.button("🚪 ログアウト"):
         st.session_state.logged_in_user = None
+        st.session_state.is_guest = False
         if "init" in st.session_state: del st.session_state.init
         st.rerun()
     
@@ -316,39 +334,46 @@ with tab_schedule:
             if not has_class: st.info("本日の授業はありません")
         else: st.success("今日は休日です")
     else:
-        st.markdown("#### ✏️ 時間割の編集")
-        edited_df = st.data_editor(st.session_state.timetable_data, use_container_width=True, num_rows="fixed")
-        if st.button("時間割を保存して共有"):
-            save_timetable(edited_df)
-            st.session_state.timetable_data = edited_df
-            st.success("保存しました！")
+        if st.session_state.is_guest:
+            st.warning("⚠️ ゲストユーザーは時間割を編集できません")
+            st.dataframe(st.session_state.timetable_data, use_container_width=True)
+        else:
+            st.markdown("#### ✏️ 時間割の編集")
+            edited_df = st.data_editor(st.session_state.timetable_data, use_container_width=True, num_rows="fixed")
+            if st.button("時間割を保存して共有"):
+                save_timetable(edited_df)
+                st.session_state.timetable_data = edited_df
+                st.success("保存しました！")
 
 with tab_homework:
-    with st.expander("✨ タスクを追加（全員に共有されます）", expanded=False):
-        with st.form("add_task", clear_on_submit=True):
-            col1, col2 = st.columns([2, 1])
-            with col1: subject = st.selectbox("科目（必須）", SUBJECT_LIST, index=0)
-            with col2: due_date = st.date_input("期限（必須）", date.today())
-            content = st.text_area("内容・メモ", placeholder="詳細を入力...", height=80)
-            st.write("📤 提出方法")
-            method = st.radio("提出方法", SUBMISSION_METHODS, horizontal=True, label_visibility="collapsed")
-            col_spacer, col_submit = st.columns([3, 1])
-            with col_submit: submit_clicked = st.form_submit_button("追加", type="primary", use_container_width=True)
-            
-            if submit_clicked:
-                if content and subject:
-                    new_task = {
-                        "id": str(uuid.uuid4()),
-                        "subject": subject,
-                        "content": content,
-                        "due_date": due_date,
-                        "method": method
-                    }
-                    if add_new_task(new_task):
-                        st.success("追加しました")
-                        del st.session_state.init
-                        st.rerun()
-                else: st.error("内容を入力してください")
+    if not st.session_state.is_guest:
+        with st.expander("✨ タスクを追加（全員に共有されます）", expanded=False):
+            with st.form("add_task", clear_on_submit=True):
+                col1, col2 = st.columns([2, 1])
+                with col1: subject = st.selectbox("科目（必須）", SUBJECT_LIST, index=0)
+                with col2: due_date = st.date_input("期限（必須）", date.today())
+                content = st.text_area("内容・メモ", placeholder="詳細を入力...", height=80)
+                st.write("📤 提出方法")
+                method = st.radio("提出方法", SUBMISSION_METHODS, horizontal=True, label_visibility="collapsed")
+                col_spacer, col_submit = st.columns([3, 1])
+                with col_submit: submit_clicked = st.form_submit_button("追加", type="primary", use_container_width=True)
+                
+                if submit_clicked:
+                    if content and subject:
+                        new_task = {
+                            "id": str(uuid.uuid4()),
+                            "subject": subject,
+                            "content": content,
+                            "due_date": due_date,
+                            "method": method
+                        }
+                        if add_new_task(new_task):
+                            st.success("追加しました")
+                            del st.session_state.init
+                            st.rerun()
+                    else: st.error("内容を入力してください")
+    else:
+        st.info("👁️ ゲストモードでは宿題の追加・編集はできません（閲覧のみ）")
 
     st.write("")
     filter_status = st.multiselect("ステータスで絞り込み", STATUS_OPTIONS, default=["未着手", "作業中"])
@@ -361,10 +386,13 @@ with tab_homework:
                 with col_action:
                     st.write("")
                     current_index = STATUS_OPTIONS.index(hw['status'])
-                    new_status = st.selectbox("状態", STATUS_OPTIONS, index=current_index, key=f"status_{hw['id']}", label_visibility="collapsed")
-                    if new_status != hw['status']:
-                        if update_user_status(hw['id'], current_user, new_status):
-                            hw['status'] = new_status
-                            st.rerun()
-                        else: st.error("更新に失敗しました")
+                    if st.session_state.is_guest:
+                        st.selectbox("状態", STATUS_OPTIONS, index=current_index, key=f"status_{hw['id']}", label_visibility="collapsed", disabled=True)
+                    else:
+                        new_status = st.selectbox("状態", STATUS_OPTIONS, index=current_index, key=f"status_{hw['id']}", label_visibility="collapsed")
+                        if new_status != hw['status']:
+                            if update_user_status(hw['id'], current_user, new_status):
+                                hw['status'] = new_status
+                                st.rerun()
+                            else: st.error("更新に失敗しました")
     else: st.info("宿題はありません")
