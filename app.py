@@ -432,22 +432,13 @@ with tab_homework:
             col1, col2 = st.columns([2, 1])
             
             with col1:
-                # セレクトボックスで選択（その他を選んだら手入力）
-                subject_choice = st.selectbox(
+                # 変更点：セレクトボックスのみにし、手入力ボックスを削除
+                # デフォルトでリストの最初（現代社会論など）を表示
+                subject = st.selectbox(
                     "科目（必須）",
                     SUBJECT_LIST,
-                    index=len(SUBJECT_LIST) - 1  # デフォルトは「その他」
+                    index=0
                 )
-                
-                # 「その他」が選ばれた場合のみ手入力欄を表示
-                if subject_choice == "その他":
-                    subject = st.text_input(
-                        "科目名を入力",
-                        placeholder="例: 電子回路2",
-                        label_visibility="collapsed"
-                    )
-                else:
-                    subject = subject_choice
             
             with col2:
                 due_date = st.date_input("期限（必須）", date.today())
@@ -489,7 +480,7 @@ with tab_homework:
                     st.success("追加しました")
                     st.rerun()
                 else:
-                    st.error("科目と内容は必須です")
+                    st.error("内容を入力してください")  # 科目は選択式なので実質必須になった
     
     # フィルタリング
     st.write("")
