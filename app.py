@@ -441,7 +441,11 @@ with tab_homework:
                 
                 # 「その他」が選ばれた場合のみ手入力欄を表示
                 if subject_choice == "その他":
-                    subject = st.text_input("科目名を入力", placeholder="例: 電子回路2")
+                    subject = st.text_input(
+                        "科目名を入力",
+                        placeholder="例: 電子回路2",
+                        label_visibility="collapsed"
+                    )
                 else:
                     subject = subject_choice
             
