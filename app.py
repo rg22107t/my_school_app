@@ -193,17 +193,28 @@ def render_homework_card(homework):
     """
 
 
-def render_class_card(period, subject):
+def render_class_card(period, subject, is_continuation=False):
     """授業カードをレンダリング"""
     if subject and str(subject).strip():
-        return f"""
-        <div style="background:white; padding:15px; border-radius:12px; 
-                    border-top: 5px solid #5c6bc0; box-shadow:0 4px 6px rgba(0,0,0,0.05); 
-                    text-align:center;">
-            <div style="color:gray; font-size:0.8rem;">{period}</div>
-            <div style="font-weight:bold; color:#1a237e;">{subject}</div>
-        </div>
-        """
+        # 継続授業の場合は薄い表示
+        if is_continuation:
+            return f"""
+            <div style="background:white; padding:15px; border-radius:12px; 
+                        border-top: 5px solid #9fa8da; box-shadow:0 4px 6px rgba(0,0,0,0.05); 
+                        text-align:center; opacity: 0.7;">
+                <div style="color:gray; font-size:0.8rem;">{period}</div>
+                <div style="font-weight:bold; color:#5c6bc0;">↓ 継続</div>
+            </div>
+            """
+        else:
+            return f"""
+            <div style="background:white; padding:15px; border-radius:12px; 
+                        border-top: 5px solid #5c6bc0; box-shadow:0 4px 6px rgba(0,0,0,0.05); 
+                        text-align:center;">
+                <div style="color:gray; font-size:0.8rem;">{period}</div>
+                <div style="font-weight:bold; color:#1a237e;">{subject}</div>
+            </div>
+            """
     else:
         return f"""
         <div style="background:#f1f3f4; padding:15px; border-radius:12px; 
@@ -357,7 +368,7 @@ tab_schedule, tab_homework = st.tabs(["📅 時間割", "📝 宿題管理"])
 
 with tab_schedule:
     today_weekday = WEEKDAYS_JP[datetime.now().weekday()]
-    today_date = datetime.now().strftime('%Y年%m月%d日')
+    today_date = datetime.now().strftime('%m/%d')
     
     mode = st.radio(
         "表示モード",
@@ -374,14 +385,21 @@ with tab_schedule:
             has_class = False
             cols = st.columns(len(schedule))
             
+            previous_subject = None
             for idx, (period, subject) in enumerate(schedule.items()):
                 with cols[idx]:
+                    # 前の時限と同じ授業かチェック
+                    is_continuation = (subject == previous_subject and 
+                                     subject and str(subject).strip())
+                    
                     st.markdown(
-                        render_class_card(period, subject),
+                        render_class_card(period, subject, is_continuation),
                         unsafe_allow_html=True
                     )
                     if subject and str(subject).strip():
                         has_class = True
+                    
+                    previous_subject = subject
             
             if not has_class:
                 st.info("本日の授業はありません")
