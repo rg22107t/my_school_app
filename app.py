@@ -391,7 +391,7 @@ with tab_homework:
                         st.markdown(f"<div style='text-align:center; color:gray; font-size:0.9em;'>{hw['status']}</div>", unsafe_allow_html=True)
                     else:
                         if hw['status'] != "完了":
-                            if st.button("✅ 完了", key=f"btn_{hw['id']}", use_container_width=True, type="primary"):
+                            if st.button("✅ 完了", key=f"btn_{hw['id']}", use_container_width=True):
                                 if update_user_status(hw['id'], current_user, "完了"):
                                     del st.session_state.init
                                     st.rerun()
