@@ -432,15 +432,18 @@ with tab_homework:
             col1, col2 = st.columns([2, 1])
             
             with col1:
-                # コンボボックス形式：リストから選択も手入力も可能
-                subject = st.selectbox(
+                # セレクトボックスで選択（その他を選んだら手入力）
+                subject_choice = st.selectbox(
                     "科目（必須）",
-                    [""] + SUBJECT_LIST,
-                    format_func=lambda x: "科目を選択または入力..." if x == "" else x
+                    SUBJECT_LIST,
+                    index=len(SUBJECT_LIST) - 1  # デフォルトは「その他」
                 )
-                # 手入力オプション
-                if subject == "":
+                
+                # 「その他」が選ばれた場合のみ手入力欄を表示
+                if subject_choice == "その他":
                     subject = st.text_input("科目名を入力", placeholder="例: 電子回路2")
+                else:
+                    subject = subject_choice
             
             with col2:
                 due_date = st.date_input("期限（必須）", date.today())
@@ -452,37 +455,28 @@ with tab_homework:
                 height=80
             )
             
-            # 提出方法をボタン形式で
+            # 提出方法
             st.write("📤 提出方法")
-            method_cols = st.columns(len(SUBMISSION_METHODS))
-            selected_method = None
-            
-            for idx, method_option in enumerate(SUBMISSION_METHODS):
-                with method_cols[idx]:
-                    if st.form_submit_button(
-                        method_option,
-                        use_container_width=True,
-                        type="secondary"
-                    ):
-                        selected_method = method_option
+            method = st.radio(
+                "提出方法",
+                SUBMISSION_METHODS,
+                horizontal=True,
+                label_visibility="collapsed"
+            )
             
             # メインの追加ボタン
             col_spacer, col_submit = st.columns([3, 1])
             with col_submit:
                 submit_clicked = st.form_submit_button("追加", type="primary", use_container_width=True)
             
-            # デフォルトの提出方法
-            if selected_method is None:
-                selected_method = SUBMISSION_METHODS[0]
-            
-            if submit_clicked or selected_method:
+            if submit_clicked:
                 if content and subject:
                     new_homework = {
                         "id": str(uuid.uuid4()),
                         "subject": subject,
                         "content": content,
                         "due_date": due_date,
-                        "method": selected_method,
+                        "method": method,
                         "priority": "中",  # デフォルト値として保持（表示はしない）
                         "status": "未着手"
                     }
@@ -490,7 +484,7 @@ with tab_homework:
                     save_all_data(st.session_state.timetable_data, st.session_state.homework_list)
                     st.success("追加しました")
                     st.rerun()
-                elif submit_clicked:
+                else:
                     st.error("科目と内容は必須です")
     
     # フィルタリング
