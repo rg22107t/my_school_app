@@ -21,30 +21,16 @@ USER_CREDENTIALS = {
 # ==========================================
 # 定数定義
 # ==========================================
-SUBJECT_LIST = [
-    "現代社会論", "保健・体育4", "実験実習", "ドイツ語", "中国語", "応用数学A", "応用数学B",
-    "物理学A", "物理学B", "計測工学", "技術英語", "電子回路2", "電気回路3",
-    "電磁気学2", "電気電子材料3", "半導体工学2", "コンピュータ工学基礎", "制御工学1",
-    "エレクトロニクス実験2", "法律", "経済", "哲学", "心理学", "現代物理学概論",
-    "英語A", "英語B", "制御工学2", "電気機器", "電力技術", "パワーエレクトロニクス",
-    "信号処理", "電気化学", "センサー工学", "ワイヤレス技術", "エレクトロニクス実験3",
-    "卒業研究", "応用専門概論", "応用専門PBL1", "応用専門PBL2", "物質プロセス基礎",
-    "生活と物質", "社会と環境", "物質デザイン概論", "防災工学", "エルゴノミクス",
-    "インターンシップ", "食品エンジニアリング", "コスメティックス", "バイオテクノロジー",
-    "高純度化技術", "環境モニタリング", "エネルギー変換デバイス", "食と健康のセンサ",
-    "環境対応デバイス", "社会基盤構造", "環境衛生工学", "維持管理工学", "水環境工学",
-    "環境デザイン論", "インクルーシブデザイン", "空間情報学", "環境行動", "その他"
-]
-
 TIMETABLE_ROWS = ["1/2限", "3/4限", "5/6限", "7/8限"]
 TIMETABLE_COLS = ["月", "火", "水", "木", "金"]
-WEEKDAYS_JP = ["月", "火", "水", "木", "金", "土", "日"]
+# 曜日ごとのタブ表示順序制御のためにマップを持っておく
+WEEKDAY_MAP = {0: "月", 1: "火", 2: "水", 3: "木", 4: "金", 5: "土", 6: "日"}
 
 STATUS_OPTIONS = ["未着手", "作業中", "完了"]
 SUBMISSION_METHODS = ["Teams", "Classroom", "Moodle", "手渡し", "その他"]
 
 # ==========================================
-# ページ設定 & CSS
+# ページ設定 & CSS（ここを強化）
 # ==========================================
 st.set_page_config(page_title="My Campus", page_icon="🎓", layout="wide")
 
@@ -54,14 +40,46 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; color: #333; }
     .stApp { background-color: #f8f9fc; }
     
-    /* カードスタイル */
+    /* ------------------------------------------
+       タブのスタイル強化 (スマホ操作用)
+       ------------------------------------------ */
+    /* タブ全体の文字サイズとパディングを大きくする */
+    button[data-baseweb="tab"] {
+        font-size: 1.2rem !important; /* 文字を大きく */
+        font-weight: bold !important;
+        padding: 1rem 1rem !important; /* 余白を広く */
+        min-height: 60px !important;
+        flex: 1; /* 横幅いっぱいに広げる */
+        background-color: #ffffff;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    /* 選択されているタブのデザイン */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #1a237e !important; /* 濃い青 */
+        border-bottom: 4px solid #1a237e !important;
+        background-color: #e8eaf6 !important; /* 薄い青背景 */
+    }
+    
+    /* タブコンテナの調整 */
+    div[data-baseweb="tab-list"] {
+        gap: 0px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }
+
+    /* ------------------------------------------
+       カードデザイン
+       ------------------------------------------ */
     .custom-card { 
         background: white; 
         border-radius: 12px; 
-        padding: 16px; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+        padding: 18px; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
         margin-bottom: 12px; 
-        border-left: 5px solid #ccc; 
+        border-left: 6px solid #ccc; 
     }
     .border-red { border-left-color: #e53935; }
     .border-orange { border-left-color: #fb8c00; }
@@ -71,19 +89,21 @@ st.markdown("""
     /* 授業カード */
     .class-card {
         background: white;
-        padding: 15px;
+        padding: 20px;
         border-radius: 12px;
         border-top: 5px solid #5c6bc0;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         text-align: center;
         height: 100%;
+        margin-bottom: 10px;
     }
     .class-card-empty {
         background: #f1f3f4;
-        padding: 15px;
+        padding: 20px;
         border-radius: 12px;
         text-align: center;
         color: #999;
+        margin-bottom: 10px;
     }
     
     /* 統計ボックス */
@@ -118,7 +138,6 @@ def load_data(current_user):
         df_tt = get_as_dataframe(ws_tt, evaluate_formulas=True).iloc[:4, :6]
         if "Unnamed: 0" in df_tt.columns: df_tt.set_index("Unnamed: 0", inplace=True)
         
-        # 形状補正
         if df_tt.shape != (4, 5):
             df_tt = pd.DataFrame("", index=TIMETABLE_ROWS, columns=TIMETABLE_COLS)
         else:
@@ -139,7 +158,6 @@ def load_data(current_user):
         
         homework_list = []
         if not df_hw.empty:
-            # 自分の進捗マップ作成
             my_progress = {}
             if not df_prog.empty and 'user' in df_prog.columns:
                 my_df = df_prog[df_prog['user'] == current_user]
@@ -180,7 +198,7 @@ def add_new_task(new_task_data):
             'content': new_task_data['content'],
             'due_date': str(new_task_data['due_date']),
             'method': new_task_data['method'],
-            'priority': '中', # 互換性維持
+            'priority': '中', 
             'status': 'ignored'
         }])
         
@@ -238,10 +256,10 @@ def render_homework_card(homework):
     return f"""
     <div class="custom-card {border}">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-weight:bold; font-size:1.05rem;">{homework['subject']}</div>
+            <div style="font-weight:bold; font-size:1.1rem;">{homework['subject']}</div>
             <div>{badge}</div>
         </div>
-        <div style="margin:8px 0; color:#444;">{homework['content']}</div>
+        <div style="margin:8px 0; color:#444; font-size:1rem;">{homework['content']}</div>
         <div style="font-size:0.85em; color:gray; display:flex; gap:10px;">
             <span>📅 {homework['due_date']}</span>
             <span>📤 {homework['method']}</span>
@@ -254,14 +272,14 @@ def render_class_card_by_day(period, subject):
     if subject and str(subject).strip():
         return f"""
         <div class="class-card">
-            <div style="color:gray; font-size:0.8rem; margin-bottom:4px;">{period}</div>
-            <div style="font-weight:bold; color:#1a237e; font-size:1.1rem;">{subject}</div>
+            <div style="color:gray; font-size:0.85rem; margin-bottom:4px;">{period}</div>
+            <div style="font-weight:bold; color:#1a237e; font-size:1.2rem;">{subject}</div>
         </div>
         """
     else:
         return f"""
         <div class="class-card-empty">
-            <div style="font-size:0.8rem;">{period}</div>
+            <div style="font-size:0.85rem;">{period}</div>
             <div>-</div>
         </div>
         """
@@ -345,43 +363,62 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     if urgent: st.error(f"🔥 {len(urgent)}件の期限が迫っています")
 
-# メインコンテンツ
-st.title(f"お疲れ様です、{current_user} さん 👋")
+# ==========================================
+# メインコンテンツ表示
+# ==========================================
 
+# 1. 挨拶の改行と強調
+st.markdown(f"""
+<h3>お疲れ様です、<br>
+<span style='font-size: 1.5em; color: #1a237e;'>{current_user} さん</span> 👋</h3>
+""", unsafe_allow_html=True)
+
+# 2. メインタブ（大きく表示）
 tab_schedule, tab_homework = st.tabs(["📅 時間割", "📝 宿題管理"])
 
-# --- 時間割タブ（曜日ごとの表示に変更）---
+# --- 時間割タブ ---
 with tab_schedule:
     mode = st.radio("モード", ["閲覧", "編集"], horizontal=True, label_visibility="collapsed")
     
     if mode == "閲覧":
-        # 今日の曜日を取得 (0=月, 6=日)
+        # 今日の曜日を取得 (0=月...6=日)
         today_idx = datetime.now().weekday()
         
-        # タブの作成（今日にはマークをつける）
-        tab_labels = []
-        for i, day in enumerate(TIMETABLE_COLS):
-            if i == today_idx:
-                tab_labels.append(f"{day} (今日)")
-            else:
-                tab_labels.append(day)
+        # 曜日リストを作成（土日は月曜開始にする）
+        if today_idx > 4: 
+            today_idx = 0
+            
+        # 3. 曜日の順序を並べ替える（今日を先頭にする）
+        # 例：今日が水曜(2)なら → [水, 木, 金, 月, 火] の順でタブを作る
+        ordered_indices = []
+        for i in range(5):
+            idx = (today_idx + i) % 5
+            ordered_indices.append(idx)
         
-        # 5日分のタブを展開
+        # タブのラベル作成
+        tab_labels = []
+        for idx in ordered_indices:
+            day_char = TIMETABLE_COLS[idx]
+            if idx == today_idx:
+                tab_labels.append(f"{day_char} (今日)")
+            else:
+                tab_labels.append(day_char)
+        
+        # 4. 大きな曜日タブを表示
         day_tabs = st.tabs(tab_labels)
         
+        # 各タブの中身を描画
         for i, day_tab in enumerate(day_tabs):
             with day_tab:
-                day_name = TIMETABLE_COLS[i]
+                # 元のTIMETABLE_COLSのインデックス
+                original_idx = ordered_indices[i]
+                day_name = TIMETABLE_COLS[original_idx]
                 
-                # データがあるか確認
                 if day_name in st.session_state.timetable_data.columns:
                     col_data = st.session_state.timetable_data[day_name]
-                    
-                    # 縦にカードを並べる
                     for period in TIMETABLE_ROWS:
                         subject = col_data.get(period, "")
                         st.markdown(render_class_card_by_day(period, subject), unsafe_allow_html=True)
-                        st.write("") # スペーサー
                 else:
                     st.info("データがありません")
                     
@@ -399,18 +436,23 @@ with tab_schedule:
 
 # --- 宿題タブ ---
 with tab_homework:
-    # 新規追加フォーム
     if not st.session_state.is_guest:
         with st.expander("✨ タスクを追加", expanded=False):
             with st.form("add_task", clear_on_submit=True):
                 c1, c2 = st.columns([2, 1])
-                subject = c1.selectbox("科目", SUBJECT_LIST)
-                due_date = c2.date_input("期限", date.today())
-                content = st.text_area("内容", height=80)
+                
+                # 4. 科目をテキスト入力のみに変更
+                with c1:
+                    subject = st.text_input("科目名（必須）", placeholder="例：応用数学A")
+                
+                with c2:
+                    due_date = st.date_input("期限（必須）", date.today())
+                
+                content = st.text_area("内容・メモ", height=100, placeholder="教科書 P20〜30 など")
                 method = st.radio("提出方法", SUBMISSION_METHODS, horizontal=True)
                 
                 if st.form_submit_button("追加", type="primary", use_container_width=True):
-                    if content:
+                    if content and subject:
                         new_task = {
                             "id": str(uuid.uuid4()),
                             "subject": subject,
@@ -423,7 +465,7 @@ with tab_homework:
                             del st.session_state.init
                             st.rerun()
                     else:
-                        st.error("内容を入力してください")
+                        st.error("科目名と内容を入力してください")
     
     st.write("")
     
@@ -437,6 +479,7 @@ with tab_homework:
                 c1, c2 = st.columns([5, 1])
                 c1.markdown(render_homework_card(hw), unsafe_allow_html=True)
                 if not st.session_state.is_guest:
+                    # 完了ボタンも少し大きく
                     if c2.button("完了", key=f"done_{hw['id']}", use_container_width=True):
                         update_user_status(hw['id'], current_user, "完了")
                         st.rerun()
