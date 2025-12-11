@@ -166,9 +166,9 @@ def save_timetable(timetable_df):
 
 def get_border_and_badge(homework, days_until_due):
     if homework['status'] == "完了": return "border-green", '<span style="color:green">✅ 完了</span>'
-    elif days_until_due < 0: return "border-blue-dark", f'<span style="color:#1565c0">🚨 {abs(days_until_due)}日遅れ</span>'
-    elif days_until_due == 0: return "border-blue-light", '<span style="color:#42a5f5">🔥 今日まで</span>'
-    else: return "border-blue", f'<span style="color:#1e88e5">⏱ あと{days_until_due}日</span>'
+    elif days_until_due < 0: return "border-red", f'<span style="color:red">🚨 {abs(days_until_due)}日遅れ</span>'
+    elif days_until_due == 0: return "border-orange", '<span style="color:orange">🔥 今日まで</span>'
+    else: return "border-blue", f'<span style="color:blue">⏱ あと{days_until_due}日</span>'
 
 def render_homework_card(homework):
     days_until_due = (homework['due_date'] - date.today()).days
@@ -203,12 +203,20 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; color: #333; }
     .stApp { background-color: #f8f9fc; }
     .custom-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #ccc; }
-    .border-blue-dark { border-left-color: #1565c0; }
-    .border-blue-light { border-left-color: #42a5f5; }
+    .border-red { border-left-color: #e53935; }
+    .border-orange { border-left-color: #fb8c00; }
     .border-blue { border-left-color: #1e88e5; }
     .border-green { border-left-color: #43a047; }
     .metric-container { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px; text-align: center; }
     .metric-value { font-size: 2.5rem; font-weight: 700; }
+    
+    /* マルチセレクトの選択タグを青色に変更 */
+    span[data-baseweb="tag"] {
+        background-color: #1e88e5 !important;
+    }
+    span[data-baseweb="tag"] span {
+        color: white !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
