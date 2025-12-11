@@ -357,6 +357,7 @@ tab_schedule, tab_homework = st.tabs(["📅 時間割", "📝 宿題管理"])
 
 with tab_schedule:
     today_weekday = WEEKDAYS_JP[datetime.now().weekday()]
+    today_date = datetime.now().strftime('%Y年%m月%d日')
     
     mode = st.radio(
         "表示モード",
@@ -366,7 +367,7 @@ with tab_schedule:
     )
     
     if mode == "今日の予定":
-        st.subheader(f"今日の授業 ({today_weekday})")
+        st.subheader(f"今日の授業 ({today_date} {today_weekday})")
         
         if today_weekday in st.session_state.timetable_data.columns:
             schedule = st.session_state.timetable_data[today_weekday]
@@ -394,7 +395,7 @@ with tab_schedule:
         edited_df = st.data_editor(
             st.session_state.timetable_data,
             use_container_width=True,
-            height=300
+            num_rows="fixed"
         )
         
         if st.button("時間割を保存して共有"):
